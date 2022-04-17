@@ -27,7 +27,7 @@ def enable_ip_forward():
 
 def get_mac(ip):
     broadcast_address = "ff:ff:ff:ff:ff:ff"
-    answerred, _ = srp(Ether(dst=broadcast_address)/ARP(pdst=ip), timeout=2, timeout=10, verbose=0)
+    answerred, _ = srp(Ether(dst=broadcast_address)/ARP(pdst=ip), timeout=2, verbose=0)
     if answerred:
         return answerred[0][1].hwsrc
 
