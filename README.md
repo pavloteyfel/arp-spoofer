@@ -18,6 +18,8 @@ optional arguments:
 ```shell
 python3 arpspoof.py 192.168.0.17 192.168.0.1
 
+Output
+
 [+] Enabling IP forwarding.
 [+] IP forwarding enabled.
 [+] Sent to 192.168.43.155 : 192.168.43.1 is at 00:0c:29:bf:00:3f
